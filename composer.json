@@ -14,6 +14,12 @@
             "TikScraper\\": "src/"
         }
     },
+    "authors": [
+        {
+            "name": "Pablo Ferreiro",
+            "homepage": "https://pabloferreiro.es"
+        }
+    ],
     "require": {
         "php": ">=7.4|^8.0",
         "ext-curl": "*",
