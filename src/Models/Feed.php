@@ -70,7 +70,7 @@ class Feed extends Base {
         if (isset($data->ItemModule)) {
             $items = array_values((array) $data->ItemModule);
 
-            if (isset($this->jsonData->UserModule)) {
+            if (isset($data->UserModule)) {
                 foreach($items as $item) { $item->author = $data->UserModule->users->{$term}; };
             }
 
