@@ -61,7 +61,7 @@ class Feed extends Base {
     }
 
     public function fromSigi(object $data, $term) {
-        $this->meta = new Meta(true, 200, null);
+        $this->meta = new Meta(true, 200, 'ok');
 
         if (isset($data->ItemList)) {
             $this->setNav($data->ItemList->{'user-post'}->hasMore, 0, $data->ItemList->{'user-post'}->cursor);
