@@ -9,6 +9,8 @@ use TikScraper\Models\Info;
 use TikScraper\Sender;
 
 class User extends Base {
+    private object $jsonData;
+
     function __construct(string $term, Sender $sender, Cache $cache) {
         parent::__construct($term, 'user', $sender, $cache);
         if (!isset($this->info)) {
@@ -23,10 +25,10 @@ class User extends Base {
         $response = new Info;
         $response->setMeta($req);
         if ($response->meta->success) {
-            $jsonData = Misc::extractSigi($req->data);
-            if (isset($jsonData->UserModule)) {
-                $response->setDetail($jsonData->UserModule->users->{$this->term});
-                $response->setStats($jsonData->UserModule->stats->{$this->term});
+            $this->jsonData = Misc::extractSigi($req->data);
+            if (isset($this->jsonData->UserModule)) {
+                $response->setDetail($this->jsonData->UserModule->users->{$this->term});
+                $response->setStats($this->jsonData->UserModule->stats->{$this->term});
             }
         }
         $this->info = $response;
@@ -49,6 +51,16 @@ class User extends Base {
             $req = $this->sender->sendApi('/api/post/item_list', 'm', $query, true, '', StaticUrls::USER_FEED);
             $response = new Feed;
             $response->fromReq($req, $cursor);
+            $this->feed = $response;
+        }
+        return $this;
+    }
+
+    public function lastFeed(): self {
+        $cached = $this->handleFeedCache();
+        if (!$cached && $this->infoOk()) {
+            $response = new Feed;
+            $response->fromSigi($this->jsonData, $this->term);
             $this->feed = $response;
         }
         return $this;

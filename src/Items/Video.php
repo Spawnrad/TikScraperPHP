@@ -37,8 +37,8 @@ class Video extends Base {
             if (isset($jsonData->ItemModule, $jsonData->ItemList, $jsonData->UserModule)) {
                 $this->term = $jsonData->ItemList->video->keyword;
                 $this->item = $jsonData->ItemModule->{$this->term};
-                $author = $this->item->author;
-                $response->setDetail($jsonData->UserModule->users->{$author});
+                $this->item->author = $jsonData->UserModule->users->{$this->item->author};
+                $response->setDetail($this->item->author);
                 $response->setStats($this->item->stats);
             }
         }

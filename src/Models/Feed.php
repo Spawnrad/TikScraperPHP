@@ -59,4 +59,22 @@ class Feed extends Base {
         $this->setItems($cache->items);
         $this->setNav($cache->hasMore, $cache->minCursor, $cache->maxCursor);
     }
+
+    public function fromSigi(object $data, $term) {
+        $this->meta = new Meta(true, 200, null);
+
+        if (isset($data->ItemList)) {
+            $this->setNav($data->ItemList->{'user-post'}->hasMore, 0, $data->ItemList->{'user-post'}->cursor);
+        }
+
+        if (isset($data->ItemModule)) {
+            $items = array_values((array) $data->ItemModule);
+
+            if (isset($this->jsonData->UserModule)) {
+                foreach($items as $item) { $item->author = $data->UserModule->users->{$term}; };
+            }
+
+            $this->setItems($items);
+        }
+    }
 }
