@@ -41,7 +41,12 @@ class Sender {
         $this->proxy = $config['proxy'] ?? [];
         if (isset($config['use_test_endpoints']) && $config['use_test_endpoints']) $this->use_test_endpoints = true;
         $this->useragent = $config['user_agent'] ?? UserAgents::DEFAULT;
-        $this->cookie_file = sys_get_temp_dir() . '/tiktok.txt';
+
+        if (isset($config['cookie_file'])) {
+            $this->cookie_file = $config['cookie_file'];
+        } else {
+            $this->cookie_file = sys_get_temp_dir() . '/tiktok.txt';
+        }
     }
 
     public function sendHead(string $url, array $req_headers = [], string $useragent = ''): array {

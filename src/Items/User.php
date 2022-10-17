@@ -9,7 +9,7 @@ use TikScraper\Models\Info;
 use TikScraper\Sender;
 
 class User extends Base {
-    private $jsonData;
+    private object $jsonData;
 
     function __construct(string $term, Sender $sender, Cache $cache) {
         parent::__construct($term, 'user', $sender, $cache);
