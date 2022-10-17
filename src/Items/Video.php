@@ -9,7 +9,7 @@ use TikScraper\Models\Response;
 use TikScraper\Sender;
 
 class Video extends Base {
-    private object $item;
+    private $item;
 
     function __construct(string $term, Sender $sender, Cache $cache) {
         parent::__construct($term, 'video', $sender, $cache);
