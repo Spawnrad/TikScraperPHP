@@ -29,6 +29,9 @@ class Meta {
         } else {
             // HTML
             $tiktok_code = 0;
+            if(str_contains($data, 'Please wait...')) {
+                $tiktok_code = 10101;
+            }
         }
 
         $tiktok_msg = Codes::fromId($tiktok_code);
