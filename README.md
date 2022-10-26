@@ -32,8 +32,8 @@ This method involves using an external signer.
 * Set 'url' to the signing endpoint
 
 Currently supported:
-* [tiktok-signature](https://github.com/carcabot/tiktok-signature)
-* [SignTok](https://github.com/pablouser1/SignTok)
+* [tiktok-signature](https://github.com/carcabot/tiktok-signature) (uses headless Chrome browser)
+* [SignTok](https://github.com/pablouser1/SignTok) (uses JSDOM)
 
 ### Browser
 This method involves using a chromedriver instance.
@@ -51,6 +51,8 @@ TikScrapperPHP supports caching requests, to use it you need to implement [Cache
 * X-Bogus support for ChromeDriver
 
 ## Credits
+* @Sharqo78: Working TikTok downloader without watermark
+
 HUGE thanks to the following projects, this wouldn't be possible without their help
 
 * [TikTok-API-PHP](https://github.com/ssovit/TikTok-API-PHP)
