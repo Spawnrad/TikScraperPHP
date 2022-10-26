@@ -11,6 +11,7 @@ class Codes {
         10000 => "VERIFY_CODE",
         10101 => "SERVER_ERROR_NOT_500",
         10102 => "USER_NOT_LOGIN",
+        10103 => "PLEASE_WAIT",
         10111 => "NET_ERROR",
         10113 => "SHARK_SLIDE",
         10114 => "SHARK_BLOCK",
