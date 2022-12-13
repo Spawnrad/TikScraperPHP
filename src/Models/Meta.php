@@ -2,6 +2,7 @@
 namespace TikScraper\Models;
 
 use TikScraper\Constants\Codes;
+use TikScraper\Helpers\Misc;
 
 /**
  * Has information about how the request went
@@ -15,6 +16,7 @@ class Meta {
     public int $http_code = 503;
     public int $tiktok_code = -1;
     public string $tiktok_msg = '';
+    public object $og;
 
     function __construct(bool $http_success, int $code, $data) {
         $http_success = $http_success;
@@ -28,9 +30,19 @@ class Meta {
             $tiktok_code = $this->getCode($data);
         } else {
             // HTML
+            $sigi = Misc::extractSigi($data);
             $tiktok_code = 0;
             if(str_contains($data, 'Please wait...')) {
                 $tiktok_code = 10101;
+            }
+            // Check that we are NOT trying to parse a photo
+            if ($sigi) {
+                if (isset($sigi->VideoPage, $sigi->VideoPage->statusCode)) {
+                    $tiktok_code = $sigi->VideoPage->statusCode;
+                }
+                $this->og = new \stdClass;
+                $this->og->title = $sigi->SEO->metaParams->title;
+                $this->og->description = $sigi->SEO->metaParams->description;
             }
         }
 
