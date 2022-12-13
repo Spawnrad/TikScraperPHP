@@ -32,23 +32,6 @@ class Hashtag extends Base {
         $this->info = $response;
     }
 
-    public function infoFromApi() {
-        $query = [
-            "challengeName" => $this->term,
-        ];
-        $req = $this->sender->sendApi('/api/challenge/detail', 'm', $query);
-        $response = new Info;
-        $response->setMeta($req);
-        if ($response->meta->success) {
-            if (isset($req->data) && isset ($req->data->challengeInfo)) {
-                $response->setDetail($req->data->challengeInfo->challenge);
-                $response->setStats($req->data->challengeInfo->stats);
-            }
-        }
-        $this->info = $response;
-        return $this;
-    }
-
     public function feed(int $cursor = 0): self {
         $this->cursor = $cursor;
 
