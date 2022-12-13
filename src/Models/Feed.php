@@ -42,6 +42,11 @@ class Feed extends Base {
                 $this->setItems($data->itemList);
             }
 
+            // Comments
+            if (isset($data->comments)) {
+                $this->setItems($data->comments);
+            }
+
             // Nav
             $hasMore = false;
             if (isset($data->hasMore)) {

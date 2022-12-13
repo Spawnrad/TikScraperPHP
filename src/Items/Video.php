@@ -57,4 +57,19 @@ class Video extends Base {
         }
         return $this;
     }
+
+    public function comments(int $cursor = 0) {
+        $this->cursor = $cursor;
+        $query = [
+            'aweme_id' =>  $this->term,
+            'count' =>  '30',
+            'cursor'=> $this->cursor,
+        ];
+        $req = $this->sender->sendApi('/api/comment/list/', 'www', $query);
+
+        $response = new Feed;
+        $response->fromReq($req, $cursor);
+        $this->feed = $response;
+        return $this;
+    }
 }
