@@ -27,6 +27,7 @@ class Sender {
     private bool $use_test_endpoints = false;
     private string $useragent = UserAgents::DEFAULT;
     private string $cookie_file = '';
+    private string $worker_url = '';
 
     function __construct(array $config) {
         // Signing
@@ -37,6 +38,7 @@ class Sender {
         $signer_config = $config['signer'];
 
         $this->signer = new Signer($signer_config);
+        $this->worker_url = $config['worker_url'];
 
         $this->proxy = $config['proxy'] ?? [];
         if (isset($config['use_test_endpoints']) && $config['use_test_endpoints']) $this->use_test_endpoints = true;
@@ -138,7 +140,7 @@ class Sender {
         $cookies .= Request::getCookies($device_id, $extra['csrf_session_id']);
 
         curl_setopt_array($ch, [
-            CURLOPT_URL => $static_url ? $static_url : $url,
+            CURLOPT_URL => $static_url ? $this->worker_url .$static_url : $this->worker_url . $url,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HEADER => false,
             CURLOPT_FOLLOWLOCATION => true,
@@ -183,7 +185,7 @@ class Sender {
         // Add query
         if (!empty($query)) $url .= '?' . http_build_query($query);
         curl_setopt_array($ch, [
-            CURLOPT_URL => $url,
+            CURLOPT_URL => $this->worker_url . $url,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HEADER => false,
             CURLOPT_FOLLOWLOCATION => true,
@@ -210,7 +212,7 @@ class Sender {
     }
 
     private function __getCsrf(string $url, string $useragent): array {
-        $res = $this->sendHead($url, [
+        $res = $this->sendHead($this->worker_url . $url, [
             "x-secsdk-csrf-version: 1.2.5",
             "x-secsdk-csrf-request: 1"
         ], $useragent);
