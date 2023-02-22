@@ -6,13 +6,11 @@ use TikScraper\Helpers\Misc;
 use TikScraper\Models\Feed;
 use TikScraper\Models\Info;
 use TikScraper\Sender;
+use TikScraper\Models\Response;
 
 class Hashtag extends Base {
     function __construct(string $term, Sender $sender, Cache $cache) {
         parent::__construct($term, 'hashtag', $sender, $cache);
-        if (!isset($this->info)) {
-            $this->info();
-        }
     }
 
     public function info() {
@@ -30,6 +28,7 @@ class Hashtag extends Base {
             }
         }
         $this->info = $response;
+        return $this;
     }
 
     public function infoFromApi() {
@@ -45,6 +44,15 @@ class Hashtag extends Base {
                 $response->setStats($req->data->challengeInfo->stats);
             }
         }
+        $this->info = $response;
+        return $this;
+    }
+
+    public function setChallengeId($id) {
+        $response = new Info;
+        $req = new Response(true, 200, (object) ['id' => $id, 'statusCode' => 0, 'status_code' => 0]);
+        $response->setMeta($req);
+        $response->setDetail((object) $req->data);
         $this->info = $response;
         return $this;
     }
