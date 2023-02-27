@@ -50,7 +50,7 @@ class Hashtag extends Base {
 
     public function setChallengeId($id) {
         $response = new Info;
-        $req = new Response(true, 200, (object) ['id' => $id, 'statusCode' => 0, 'status_code' => 0]);
+        $req = new Response(200, (object) ['id' => $id, 'statusCode' => 0, 'status_code' => 0]);
         $response->setMeta($req);
         $response->setDetail((object) $req->data);
         $this->info = $response;
