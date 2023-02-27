@@ -34,12 +34,13 @@ class Video extends Base {
         $response->setMeta($req);
         if ($response->meta->success) {
             $jsonData = Misc::extractSigi($req->data);
-            if (isset($jsonData->ItemModule, $jsonData->ItemList, $jsonData->UserModule)) {
+            if (isset($jsonData->SharingVideoModule)) {
                 $this->term = $jsonData->ItemList->video->keyword;
                 $this->item = $jsonData->ItemModule->{$this->term};
+                $this->item = $jsonData->SharingVideoModule->videoData->itemInfo->itemStruct;
                 $this->item->author = $jsonData->UserModule->users->{$this->item->author};
                 $response->setDetail($this->item->author);
-                $response->setStats($this->item->stats);
+                $response->setStats($this->item->authorStats);
             }
         }
         $this->info = $response;
@@ -52,7 +53,7 @@ class Video extends Base {
             $response = new Feed;
             $response->setItems([$this->item]);
             $response->setNav(false, null, '');
-            $response->setMeta(new Response(true, 200, "PLACEHOLDER"));
+            $response->setMeta(new Response(200, "PLACEHOLDER"));
             $this->feed = $response;
         }
         return $this;

@@ -5,10 +5,14 @@ use TikScraper\Constants\UserAgents;
 use TikScraper\Helpers\Algorithm;
 use TikScraper\Helpers\Request;
 use TikScraper\Models\Response;
+use TikScraper\Traits\ProxyTrait;
+use TikScraper\Traits\CookieTrait;
 
 class Sender {
-    private const REFERER = 'https://www.tiktok.com/';
+    use ProxyTrait;
+    use CookieTrait;
 
+    private const REFERER = 'https://www.tiktok.com/';
     private const DEFAULT_API_HEADERS = [
         "authority: m.tiktok.com",
         "method: GET",
@@ -23,10 +27,8 @@ class Sender {
     ];
 
     private Signer $signer;
-    private array $proxy = [];
-    private bool $use_test_endpoints = false;
-    private string $useragent = UserAgents::DEFAULT;
-    private string $cookie_file = '';
+    private bool $testEndpoints = false;
+    private string $userAgent = UserAgents::DEFAULT;
     private string $worker_url = '';
 
     function __construct(array $config) {
@@ -35,64 +37,22 @@ class Sender {
             throw new \Exception("You need to send a signer config! Please check the README for more info");
         }
 
-        $signer_config = $config['signer'];
-
-        $this->signer = new Signer($signer_config);
+        $this->signer = new Signer($config['signer']);
+        if (isset($config['use_test_endpoints']) && $config['use_test_endpoints']) $this->testEndpoints = true;
+        $this->userAgent = $config['user_agent'] ?? UserAgents::DEFAULT;
         $this->worker_url = $config['worker_url'];
 
-        $this->proxy = $config['proxy'] ?? [];
-        if (isset($config['use_test_endpoints']) && $config['use_test_endpoints']) $this->use_test_endpoints = true;
-        $this->useragent = $config['user_agent'] ?? UserAgents::DEFAULT;
-
-        if (isset($config['cookie_file'])) {
-            $this->cookie_file = $config['cookie_file'];
-        } else {
-            $this->cookie_file = sys_get_temp_dir() . '/tiktok.txt';
-        }
-    }
-
-    public function sendHead(string $url, array $req_headers = [], string $useragent = ''): array {
-        if (!$useragent) {
-            $useragent = $this->useragent;
-        }
-        $headers = [];
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_NOBODY => true,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HEADER => true,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_USERAGENT => $useragent,
-            CURLOPT_ENCODING => 'utf-8',
-            CURLOPT_AUTOREFERER => true,
-            CURLOPT_HTTPHEADER => $req_headers
-        ]);
-
-        curl_setopt($ch, CURLOPT_HEADERFUNCTION, function($curl, $header) use (&$headers) {
-            $len = strlen($header);
-            $header = explode(':', $header, 2);
-            if (count($header) < 2) return $len;
-            $headers[strtolower(trim($header[0]))][] = trim($header[1]);
-            return $len;
-        });
-
-        Request::handleProxy($ch, $this->proxy);
-
-        $data = curl_exec($ch);
-        curl_close($ch);
-        return [
-            'data' => $data,
-            'headers' => $headers
-        ];
+        $this->initProxy($config['proxy'] ?? []);
+        $this->initCookies();
     }
 
     /**
-     * Send request to TikTok's API
+     * Send request to TikTok's internal API
      * @param string $endpoint
-     * @param string $subdomain subdomain to be used, may be m, t or www
-     * @param array $query custom query to be sent, later to me merged with some default values
-     * @param bool $send_tt_params send or not x-tt-params header, some endpoints use it
-     * @param string $ttwid send or not ttwid cookie, only used with trending
+     * @param string $subdomain Subdomain to be used, may be m, t or www
+     * @param array $query Custom query to be sent, later to me merged with some default values
+     * @param bool $send_tt_params Send or not x-tt-params header, some endpoints use it
+     * @param string $ttwid Send or not ttwid cookie, only used for trending
      * @param string $static_url URL to be used instead of $endpoint to bypass some captchas
      */
     public function sendApi(
@@ -104,14 +64,14 @@ class Sender {
         string $static_url = ''
     ): Response {
         // Use test subdomain if test endpoints are enabled
-        if ($this->use_test_endpoints && $subdomain === 'm') {
+        if ($this->testEndpoints && $subdomain === 'm') {
             $subdomain = 't';
         }
         $headers = [];
         $cookies = '';
         $ch = curl_init();
         $url = 'https://' . $subdomain . '.tiktok.com' . $endpoint;
-        $useragent = $this->useragent;
+        $useragent = $this->userAgent;
         $device_id = Algorithm::deviceId();
 
         $headers[] = "Path: $endpoint";
@@ -129,51 +89,55 @@ class Sender {
                 $cookies .= 'ttwid=' . $ttwid . ';';
             }
         } else {
-            return new Response(false, 500, (object) [
+            // Signing error
+            return new Response(500, (object) [
                 'statusCode' => 20
             ]);
         }
 
-        // Get csrf cookie and header, useful for avoiding captchas
-        $extra = $this->__getCsrf($url, $useragent);
-        $headers[] = 'x-secsdk-csrf-token:' . $extra['csrf_token'];
-        $cookies .= Request::getCookies($device_id, $extra['csrf_session_id']);
-
+        $this->setProxy($ch);
         curl_setopt_array($ch, [
             CURLOPT_URL => $static_url ? $this->worker_url .$static_url : $this->worker_url . $url,
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_COOKIEJAR => $this->cookieFile,
+            CURLOPT_COOKIEFILE => $this->cookieFile,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HEADER => false,
             CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_REFERER => self::REFERER,
+            CURLOPT_AUTOREFERER => true,
             CURLOPT_USERAGENT => $useragent,
             CURLOPT_ENCODING => 'utf-8',
-            CURLOPT_AUTOREFERER => true,
-            CURLOPT_REFERER => self::REFERER,
-            CURLOPT_HTTPHEADER => $headers,
             CURLOPT_CONNECTTIMEOUT => 30,
             CURLOPT_TIMEOUT => 30,
-            CURLOPT_MAXREDIRS => 5,
-            CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4
+            CURLOPT_MAXREDIRS => 5
         ]);
+
         if ($cookies) {
             curl_setopt($ch, CURLOPT_COOKIE, $cookies);
         }
 
-        Request::handleProxy($ch, $this->proxy);
         $data = curl_exec($ch);
         $error = curl_errno($ch);
         $code = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
         curl_close($ch);
-        if ($data && !$error) {
+        if (!$error && $data) {
             // Request sent
-            return new Response($code >= 200 && $code < 400, $code, json_decode($data));
+            return new Response($code, json_decode($data));
         }
 
-        // Return an error if the request didn't happen (timeouts for example)
-        return new Response(false, 503, (object) [
+        // Request went bad (timeouts, empty responses...)
+        return new Response(503, (object) [
             'statusCode' => 10
         ]);
     }
 
+    /**
+     * Send request to TikTok website
+     * @param string $endpoint
+     * @param string $subdomain Subdomain to be used, may be m or www
+     * @param array $query Query to append to URL
+     */
     public function sendHTML(
         string $endpoint,
         string $subdomain = 'www',
@@ -181,50 +145,68 @@ class Sender {
     ): Response {
         $ch = curl_init();
         $url = 'https://' . $subdomain . '.tiktok.com' . $endpoint;
-        $useragent = $this->useragent;
         // Add query
         if (!empty($query)) $url .= '?' . http_build_query($query);
         curl_setopt_array($ch, [
             CURLOPT_URL => $this->worker_url . $url,
+            CURLOPT_COOKIEJAR => $this->cookieFile,
+            CURLOPT_COOKIEFILE => $this->cookieFile,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HEADER => false,
             CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_USERAGENT => $useragent,
+            CURLOPT_USERAGENT => $this->userAgent,
             CURLOPT_ENCODING => 'utf-8',
             CURLOPT_AUTOREFERER => true,
             CURLOPT_CONNECTTIMEOUT => 30,
             CURLOPT_TIMEOUT => 30,
             CURLOPT_MAXREDIRS => 5,
-            CURLOPT_COOKIEJAR => $this->cookie_file,
-            CURLOPT_COOKIEFILE => $this->cookie_file,
-            CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4
         ]);
-        Request::handleProxy($ch, $this->proxy);
+        $this->setProxy($ch);
         $data = curl_exec($ch);
         $error = curl_errno($ch);
         $code = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
         curl_close($ch);
-        if (!$error) {
+        if (!$error && $data) {
             // Request sent
-            return new Response($code >= 200 && $code < 400, $code, $data);
+            return new Response($code, $data);
         }
-        return new Response(false, 503, '');
+        return new Response(503, '');
     }
 
-    private function __getCsrf(string $url, string $useragent): array {
-        $res = $this->sendHead($this->worker_url . $url, [
-            "x-secsdk-csrf-version: 1.2.5",
-            "x-secsdk-csrf-request: 1"
-        ], $useragent);
-        $headers = $res['headers'];
-        $cookies = Request::extractCookies($res['data']);
+    /**
+     * Sends a GET/HEAD request to TikTok, usually used to get some required cookies/headers for later
+     * @param $url URL to be used
+     * @param $headMethod Send a HEAD request if true or a GET request if false
+     * @return array 'cookies' and 'headers'
+     */
+    public function sendHead(string $url, bool $headMethod = false): array {
+        $resHeaders = [];
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_NOBODY => $headMethod,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HEADER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_USERAGENT => $this->userAgent,
+            CURLOPT_ENCODING => 'utf-8',
+            CURLOPT_AUTOREFERER => true
+        ]);
 
-        $csrf_session_id = $cookies['csrf_session_id'] ?? '';
-        $csrf_token = isset($headers['x-ware-csrf-token'][0]) ? explode(',', $headers['x-ware-csrf-token'][0])[1] : '';
+        curl_setopt($ch, CURLOPT_HEADERFUNCTION, function($curl, $header) use (&$resHeaders) {
+            $len = strlen($header);
+            $header = explode(':', $header, 2);
+            if (count($header) < 2) return $len;
+            $resHeaders[strtolower(trim($header[0]))][] = trim($header[1]);
+            return $len;
+        });
 
+        $this->setProxy($ch);
+
+        $data = curl_exec($ch);
+        curl_close($ch);
         return [
-            'csrf_session_id' => $csrf_session_id,
-            'csrf_token' => $csrf_token
+            'cookies' => Request::extractCookies($data),
+            'headers' => $resHeaders
         ];
     }
 }
