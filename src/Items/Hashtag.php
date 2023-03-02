@@ -52,7 +52,7 @@ class Hashtag extends Base {
         $response = new Info;
         $req = new Response(200, (object) ['id' => $id, 'statusCode' => 0, 'status_code' => 0]);
         $response->setMeta($req);
-        $response->setDetail((object) $req->data);
+        $response->setDetail($req->data);
         $this->info = $response;
         return $this;
     }
