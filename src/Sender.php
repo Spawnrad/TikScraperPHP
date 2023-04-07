@@ -1,12 +1,12 @@
 <?php
 namespace TikScraper;
 
-use TikScraper\Constants\UserAgents;
+use Deemon47\UserAgent;
 use TikScraper\Helpers\Algorithm;
 use TikScraper\Helpers\Request;
 use TikScraper\Models\Response;
-use TikScraper\Traits\ProxyTrait;
 use TikScraper\Traits\CookieTrait;
+use TikScraper\Traits\ProxyTrait;
 
 class Sender {
     use ProxyTrait;
@@ -28,8 +28,8 @@ class Sender {
 
     private Signer $signer;
     private bool $testEndpoints = false;
-    private string $userAgent = UserAgents::DEFAULT;
     private string $worker_url = '';
+    private string $userAgent;
 
     function __construct(array $config) {
         // Signing
@@ -39,8 +39,9 @@ class Sender {
 
         $this->signer = new Signer($config['signer']);
         if (isset($config['use_test_endpoints']) && $config['use_test_endpoints']) $this->testEndpoints = true;
-        $this->userAgent = $config['user_agent'] ?? UserAgents::DEFAULT;
+
         $this->worker_url = $config['worker_url'];
+        $this->userAgent = $config['user_agent'] ?? (new UserAgent)->generate('android');
 
         $this->initProxy($config['proxy'] ?? []);
         $this->initCookies();
@@ -108,8 +109,8 @@ class Sender {
             CURLOPT_AUTOREFERER => true,
             CURLOPT_USERAGENT => $useragent,
             CURLOPT_ENCODING => 'utf-8',
-            CURLOPT_CONNECTTIMEOUT => 30,
-            CURLOPT_TIMEOUT => 30,
+            CURLOPT_CONNECTTIMEOUT => 15,
+            CURLOPT_TIMEOUT => 15,
             CURLOPT_MAXREDIRS => 5
         ]);
 
@@ -157,8 +158,8 @@ class Sender {
             CURLOPT_USERAGENT => $this->userAgent,
             CURLOPT_ENCODING => 'utf-8',
             CURLOPT_AUTOREFERER => true,
-            CURLOPT_CONNECTTIMEOUT => 30,
-            CURLOPT_TIMEOUT => 30,
+            CURLOPT_CONNECTTIMEOUT => 15,
+            CURLOPT_TIMEOUT => 15,
             CURLOPT_MAXREDIRS => 5,
         ]);
         $this->setProxy($ch);
