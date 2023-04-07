@@ -32,17 +32,13 @@ class Meta {
             // HTML
             $sigi = Misc::extractSigi($data);
             $tiktok_code = 0;
-            if(str_contains($data, 'Please wait...')) {
-                $tiktok_code = 10101;
-            }
-            // Check that we are NOT trying to parse a photo
             if ($sigi) {
-                if (isset($sigi->VideoPage, $sigi->VideoPage->statusCode)) {
-                    $tiktok_code = $sigi->VideoPage->statusCode;
+                if (isset($sigi->MobileUserPage)) {
+                    $tiktok_code = $sigi->MobileUserPage->statusCode;
                 }
                 $this->og = new \stdClass;
-                $this->og->title = $sigi->SEO->metaParams->title;
-                $this->og->description = $sigi->SEO->metaParams->description;
+                $this->og->title = $sigi->SEOState->metaParams->title;
+                $this->og->description = $sigi->SEOState->metaParams->description;
             }
         }
 
