@@ -42,11 +42,15 @@ class User extends Base {
         $this->info = $info;
     }
 
-    public function feed(int $cursor = 0): self {
+    public function feed(int $cursor = 0, $useApi = false): self {
         $this->cursor = $cursor;
 
         if ($this->infoOk()) {
-            $preloaded = $this->handleFeedPreload('user-post');
+            if ($useApi) {
+                $preloaded = false;
+            } else {
+                $preloaded = $this->handleFeedPreload('user-post');
+            }
 
             if (!$preloaded) {
                 $query = [
